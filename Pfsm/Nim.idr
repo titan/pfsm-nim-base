@@ -1,0 +1,185 @@
+module Pfsm.Nim
+
+import Data.List
+import Data.Strings
+import Pfsm
+import Pfsm.Data
+
+export
+nimBuiltinTypes : List String
+nimBuiltinTypes = [ "int"
+                  , "int8"
+                  , "int16"
+                  , "int32"
+                  , "int64"
+                  , "uint"
+                  , "uint8"
+                  , "uint16"
+                  , "uint32"
+                  , "uint64"
+                  , "float"
+                  , "float32"
+                  , "float64"
+                  , "true"
+                  , "false"
+                  , "char"
+                  , "string"
+                  , "cstring"
+                  ]
+
+export
+nimKeywords : List String
+nimKeywords = [ "addr"
+              , "and"
+              , "as"
+              , "asm"
+              , "bind"
+              , "block"
+              , "break"
+              , "case"
+              , "cast"
+              , "concept"
+              , "const"
+              , "continue"
+              , "converter"
+              , "defer"
+              , "discard"
+              , "distinct"
+              , "div"
+              , "do"
+              , "elif"
+              , "else"
+              , "end"
+              , "enum"
+              , "except"
+              , "export"
+              , "finally"
+              , "for"
+              , "from"
+              , "func"
+              , "if"
+              , "import"
+              , "in"
+              , "include"
+              , "interface"
+              , "is"
+              , "isnot"
+              , "iterator"
+              , "let"
+              , "macro"
+              , "method"
+              , "mixin"
+              , "mod"
+              , "nil"
+              , "not"
+              , "notin"
+              , "object"
+              , "of"
+              , "or"
+              , "out"
+              , "proc"
+              , "ptr"
+              , "raise"
+              , "ref"
+              , "return"
+              , "shl"
+              , "shr"
+              , "static"
+              , "template"
+              , "try"
+              , "tuple"
+              , "type"
+              , "using"
+              , "var"
+              , "when"
+              , "while"
+              , "xor"
+              , "yield"
+              ]
+
+export
+primToNimType : PrimType -> String
+primToNimType PTBool   = "bool"
+primToNimType PTByte   = "uint8"
+primToNimType PTChar   = "char"
+primToNimType PTShort  = "int16"
+primToNimType PTUShort = "uint16"
+primToNimType PTInt    = "int"
+primToNimType PTUInt   = "uint"
+primToNimType PTLong   = "int64"
+primToNimType PTULong  = "uint64"
+primToNimType PTReal   = "float64"
+primToNimType PTString = "string"
+
+export
+toNimName : Name -> String
+toNimName n
+  = let n' = normalize n in
+        if elemBy (==) n' nimKeywords
+           then "_" ++ n' ++ "_"
+           else n'
+  where
+    mappings : List (String, String)
+    mappings = [ (" ", "_")
+               , ("-", "_")
+               , ("+", "plus")
+               ]
+    normalize : Name -> String
+    normalize n = foldl (\acc, x => replaceAll (fst x) (snd x) acc) n mappings
+
+export
+toNimType : Tipe -> String
+toNimType TUnit                                 = "void"
+toNimType (TPrimType t)                         = primToNimType t
+toNimType (TList t)                             = "seq[" ++ (toNimType t) ++ "]"
+toNimType (TDict PTString (TPrimType PTString)) = "StringTableRef"
+toNimType (TDict k v)                           = "Table[" ++ (primToNimType k) ++ ", " ++ (toNimType v) ++ "]"
+toNimType (TRecord n ts)                        = toNimName n
+toNimType t@(TArrow a b)                        = case liftArrowParams t [] of
+                                                       []      => toNimFuncType []           TUnit
+                                                       x :: xs => toNimFuncType (reverse xs) x
+                                                where
+                                                  liftArrowParams : Tipe -> List Tipe -> List Tipe
+                                                  liftArrowParams (TArrow a b@(TArrow _ _)) acc = liftArrowParams b (a :: acc)
+                                                  liftArrowParams (TArrow a b)              acc = b :: (a :: acc)
+                                                  liftArrowParams _                         acc = acc
+
+                                                  toNimFuncType : List Tipe -> Tipe -> String
+                                                  toNimFuncType as r
+                                                    = let args = join ", " (map (\(i, x) => "a" ++ (show i) ++ ": " ++ toNimType(x)) (enumerate as))
+                                                          ret  = toNimType r in
+                                                          "proc (" ++ args ++ "): " ++ ret
+
+export
+toNimModelAttribute : String -> String
+toNimModelAttribute "@" = "model"
+toNimModelAttribute a = if isPrefixOf "@" a
+                           then "model." ++ toNimName (substr 1 (minus (length a) 1) a)
+                           else toNimName a
+
+export
+toNimExpression : String -> Expression -> String
+toNimExpression "fsm.guard_delegate" (ApplicationExpression n es) = "fsm.guard_delegate" ++ "." ++ (toNimName n) ++ "(" ++ (join ", " (map (toNimExpression "fsm.guard_delegate") ((IdentifyExpression "model") :: es))) ++ ")"
+toNimExpression caller (ApplicationExpression n es) = caller ++ "." ++ (toNimName n) ++ "(" ++ (join ", " (map (toNimExpression caller) es)) ++ ")"
+toNimExpression _      (BooleanExpression True)     = "true"
+toNimExpression _      (BooleanExpression False)    = "false"
+toNimExpression _      (IdentifyExpression i)       = toNimModelAttribute i
+toNimExpression _      (IntegerLiteralExpression i) = show i
+toNimExpression _      (RealLiteralExpression r)    = show r
+toNimExpression _      (StringLiteralExpression s)  = "\"" ++ s ++ "\""
+
+export
+toNimCompareOperation : CompareOperation -> String
+toNimCompareOperation NotEqualsToOperation         = "!="
+toNimCompareOperation EqualsToOperation            = "=="
+toNimCompareOperation LessThanOperation            = "<"
+toNimCompareOperation LessThanOrEqualsToOperation  = "<="
+toNimCompareOperation GreatThanOperation           = ">"
+toNimCompareOperation GreatThanOrEqualsToOperation = ">="
+
+export
+toNimTestExpression : String -> TestExpression -> String
+toNimTestExpression caller (PrimitiveTestExpression e)     = toNimExpression caller e
+toNimTestExpression caller (BinaryTestExpression op e1 e2) = (toNimTestExpression caller e1) ++ " " ++ (show op) ++ " " ++ (toNimTestExpression caller e2)
+toNimTestExpression caller (UnaryTestExpression op e)      = (show op) ++ " " ++ (toNimTestExpression caller e)
+toNimTestExpression caller (CompareExpression op e1 e2)    = (toNimExpression caller e1) ++ " " ++ (toNimCompareOperation op) ++ " " ++ (toNimExpression caller e2)

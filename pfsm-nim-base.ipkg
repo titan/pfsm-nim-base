@@ -1,0 +1,5 @@
+package pfsm
+
+modules = Pfsm.Nim
+depends = contrib, pfsm
+
