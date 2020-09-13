@@ -133,7 +133,7 @@ toNimType TUnit                                 = "void"
 toNimType (TPrimType t)                         = primToNimType t
 toNimType (TList t)                             = "seq[" ++ (toNimType t) ++ "]"
 toNimType (TDict PTString (TPrimType PTString)) = "StringTableRef"
-toNimType (TDict k v)                           = "Table[" ++ (primToNimType k) ++ ", " ++ (toNimType v) ++ "]"
+toNimType (TDict k v)                           = "TableRef[" ++ (primToNimType k) ++ ", " ++ (toNimType v) ++ "]"
 toNimType (TRecord n ts)                        = toNimName n
 toNimType t@(TArrow a b)                        = case liftArrowParams t [] of
                                                        []      => toNimFuncType []           TUnit
@@ -153,20 +153,20 @@ toNimType t@(TArrow a b)                        = case liftArrowParams t [] of
 export
 toNimModelAttribute : String -> String
 toNimModelAttribute "@" = "model"
-toNimModelAttribute a = if isPrefixOf "@" a
-                           then "model." ++ toNimName (substr 1 (minus (length a) 1) a)
-                           else toNimName a
+toNimModelAttribute a   = if isPrefixOf "@" a
+                             then "model." ++ toNimName (substr 1 (minus (length a) 1) a)
+                             else toNimName a
 
 export
 toNimExpression : String -> Expression -> String
 toNimExpression "fsm.guard_delegate" (ApplicationExpression n es) = "fsm.guard_delegate" ++ "." ++ (toNimName n) ++ "(" ++ (join ", " (map (toNimExpression "fsm.guard_delegate") ((IdentifyExpression "model") :: es))) ++ ")"
-toNimExpression caller (ApplicationExpression n es) = caller ++ "." ++ (toNimName n) ++ "(" ++ (join ", " (map (toNimExpression caller) es)) ++ ")"
-toNimExpression _      (BooleanExpression True)     = "true"
-toNimExpression _      (BooleanExpression False)    = "false"
-toNimExpression _      (IdentifyExpression i)       = toNimModelAttribute i
-toNimExpression _      (IntegerLiteralExpression i) = show i
-toNimExpression _      (RealLiteralExpression r)    = show r
-toNimExpression _      (StringLiteralExpression s)  = "\"" ++ s ++ "\""
+toNimExpression caller               (ApplicationExpression n es) = caller ++ "." ++ (toNimName n) ++ "(" ++ (join ", " (map (toNimExpression caller) es)) ++ ")"
+toNimExpression _                    (BooleanExpression True)     = "true"
+toNimExpression _                    (BooleanExpression False)    = "false"
+toNimExpression _                    (IdentifyExpression i)       = toNimModelAttribute i
+toNimExpression _                    (IntegerLiteralExpression i) = show i
+toNimExpression _                    (RealLiteralExpression r)    = show r
+toNimExpression _                    (StringLiteralExpression s)  = "\"" ++ s ++ "\""
 
 export
 toNimCompareOperation : CompareOperation -> String
@@ -183,3 +183,45 @@ toNimTestExpression caller (PrimitiveTestExpression e)     = toNimExpression cal
 toNimTestExpression caller (BinaryTestExpression op e1 e2) = (toNimTestExpression caller e1) ++ " " ++ (show op) ++ " " ++ (toNimTestExpression caller e2)
 toNimTestExpression caller (UnaryTestExpression op e)      = (show op) ++ " " ++ (toNimTestExpression caller e)
 toNimTestExpression caller (CompareExpression op e1 e2)    = (toNimExpression caller e1) ++ " " ++ (toNimCompareOperation op) ++ " " ++ (toNimExpression caller e2)
+
+export
+toNimFromJson : String -> Tipe -> String
+toNimFromJson s (TPrimType PTBool)                                     = s ++ "getBool"
+toNimFromJson s (TPrimType PTByte)                                     = "cast[uint8](" ++ s ++ ".getInt)"
+toNimFromJson s (TPrimType PTShort)                                    = "cast[int16](" ++ s ++ ".getInt)"
+toNimFromJson s (TPrimType PTUShort)                                   = "cast[uint16](" ++ s ++ ".getInt)"
+toNimFromJson s (TPrimType PTInt)                                      = s ++ ".getInt"
+toNimFromJson s (TPrimType PTUInt)                                     = "cast[uint](" ++ s ++ ".getInt)"
+toNimFromJson s (TPrimType PTLong)                                     = s ++ ".getBiggestInt"
+toNimFromJson s (TPrimType PTULong)                                    = "cast[uint64](" ++ s ++ ".getBiggestInt)"
+toNimFromJson s (TPrimType PTReal)                                     = s ++ ".getFloat"
+toNimFromJson s (TPrimType PTChar)                                     = "if len(" ++ s ++ ".getStr) > 0: " ++ s ++ ".getStr()[0] else: '\\0'"
+toNimFromJson s (TPrimType PTString)                                   = s ++ ".getStr"
+toNimFromJson s (TList t)                                              = s ++ ".getElems.mapIt(" ++ (toNimFromJson "it" t) ++ ")"
+toNimFromJson s (TDict PTString (TPrimType PTString))                  = s ++ ".jsonToStringTable"
+toNimFromJson s (TDict PTString t@(TPrimType _))                       = s ++ ".jsonToPrimitiveTable[" ++ (toNimType t) ++ "]()"
+toNimFromJson s (TDict PTString (TList t))                             = s ++ ".jsonToSeqTable[" ++ (toNimType t) ++ "]()"
+toNimFromJson s (TDict PTString (TDict PTString (TPrimType PTString))) = s ++ ".jsonToDictStringTable()"
+toNimFromJson s (TDict PTString (TDict PTString t@(TPrimType _)))      = s ++ ".jsonToDictTable[" ++ (toNimType t) ++ "]()"
+toNimFromJson s _                                                      = s
+
+export
+toNimFromString : String -> Tipe -> String
+toNimFromString s (TPrimType PTBool)                                     = s ++ ".parseBool"
+toNimFromString s (TPrimType PTByte)                                     = "cast[uint8](" ++ s ++ ".parseInt)"
+toNimFromString s (TPrimType PTShort)                                    = "cast[int16](" ++ s ++ ".parseInt)"
+toNimFromString s (TPrimType PTUShort)                                   = "cast[uint16](" ++ s ++ ".parseUInt)"
+toNimFromString s (TPrimType PTInt)                                      = s ++ ".parseInt"
+toNimFromString s (TPrimType PTUInt)                                     = s ++ ".parseUInt"
+toNimFromString s (TPrimType PTLong)                                     = s ++ ".parseBiggestInt"
+toNimFromString s (TPrimType PTULong)                                    = s ++ ".parseBiggestUInt"
+toNimFromString s (TPrimType PTReal)                                     = s ++ ".parseFloat"
+toNimFromString s (TPrimType PTChar)                                     = "if len(" ++ s ++ ") > 0: " ++ s ++ "[0] else: '\\0'"
+toNimFromString s (TPrimType PTString)                                   = s
+toNimFromString s t@(TList _)                                            = (toNimFromJson (s ++ ".parseJson()") t)
+toNimFromString s (TDict PTString (TPrimType PTString))                  = s ++ ".parseJson().jsonToStringTable"
+toNimFromString s (TDict PTString t@(TPrimType _))                       = s ++ ".parseJson().jsonToPrimitiveTable[" ++ (toNimType t) ++ "]()"
+toNimFromString s (TDict PTString (TList t))                             = s ++ ".parseJson().jsonToSeqTable[" ++ (toNimType t) ++ "]()"
+toNimFromString s (TDict PTString (TDict PTString (TPrimType PTString))) = s ++ ".parseJson().jsonToDictStringTable()"
+toNimFromString s (TDict PTString (TDict PTString t@(TPrimType _)))      = s ++ ".parseJson().jsonToDictTable[" ++ (toNimType t) ++ "]()"
+toNimFromString s _                                                      = s
