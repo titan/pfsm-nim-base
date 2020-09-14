@@ -75,6 +75,7 @@ nimKeywords = [ "addr"
               , "notin"
               , "object"
               , "of"
+              , "off"
               , "or"
               , "out"
               , "proc"
@@ -116,7 +117,7 @@ toNimName : Name -> String
 toNimName n
   = let n' = normalize n in
         if elemBy (==) n' nimKeywords
-           then "_" ++ n' ++ "_"
+           then "my_" ++ n'
            else n'
   where
     mappings : List (String, String)
