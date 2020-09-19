@@ -129,6 +129,14 @@ toNimName n
     normalize n = foldl (\acc, x => replaceAll (fst x) (snd x) acc) n mappings
 
 export
+toNimFuncName : Name -> String
+toNimFuncName "+" = "`+`"
+toNimFuncName "-" = "`-`"
+toNimFuncName "*" = "`*`"
+toNimFuncName "/" = "`/`"
+toNimFuncName n   = toNimName n
+
+export
 toNimType : Tipe -> String
 toNimType TUnit                                 = "void"
 toNimType (TPrimType t)                         = primToNimType t
@@ -160,8 +168,8 @@ toNimModelAttribute a   = if isPrefixOf "@" a
 
 export
 toNimExpression : String -> Expression -> String
-toNimExpression "fsm.guard_delegate" (ApplicationExpression n es) = "fsm.guard_delegate" ++ "." ++ (toNimName n) ++ "(" ++ (join ", " (map (toNimExpression "fsm.guard_delegate") ((IdentifyExpression "model") :: es))) ++ ")"
-toNimExpression caller               (ApplicationExpression n es) = caller ++ "." ++ (toNimName n) ++ "(" ++ (join ", " (map (toNimExpression caller) es)) ++ ")"
+toNimExpression "fsm.guard_delegate" (ApplicationExpression n es) = "fsm.guard_delegate" ++ "." ++ (toNimFuncName n) ++ "(" ++ (join ", " (map (toNimExpression "fsm.guard_delegate") ((IdentifyExpression "model") :: es))) ++ ")"
+toNimExpression caller               (ApplicationExpression n es) = caller ++ "." ++ (toNimFuncName n) ++ "(" ++ (join ", " (map (toNimExpression caller) es)) ++ ")"
 toNimExpression _                    (BooleanExpression True)     = "true"
 toNimExpression _                    (BooleanExpression False)    = "false"
 toNimExpression _                    (IdentifyExpression i)       = toNimModelAttribute i
