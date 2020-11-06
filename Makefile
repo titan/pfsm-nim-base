@@ -1,7 +1,6 @@
-NAME=pfsm-nim-base
+include .config
 NAME-LINK=$(subst _,-,$(NAME))
 
-include .config
 PKGPREFIX=Pfsm
 TARGET=$(BUILDDIR)/build/ttc/$(PKGPREFIX)/Nim.ttc
 SRCS=$(wildcard $(PKGPREFIX)/*.idr)
@@ -11,10 +10,13 @@ PRJCONF=$(NAME-LINK).ipkg
 
 all: $(TARGET)
 
-$(TARGET): $(DSTSRCS) $(BUILDDIR)/$(PRJCONF) | prebuild
+install: $(TARGET)
+	cd $(BUILDDIR); idris2 --install $(PRJCONF); cd -
+
+$(TARGET): $(SRCS:%=$(BUILDDIR)/%) $(BUILDDIR)/$(PRJCONF) | prebuild
 	cd $(BUILDDIR); idris2 --build $(PRJCONF); cd -
 
-$(BUILDDIR)/$(PKGPREFIX)/%.idr: $(PKGPREFIX)/%.idr | prebuild
+$(SRCS): %: $(BUILDDIR)/% | prebuild
 	cp $< $@
 
 $(BUILDDIR)/%.idr: %.idr | prebuild
@@ -31,4 +33,4 @@ endif
 clean:
 	@rm -rf $(BUILDDIR)
 
-.PHONY: all clean prebuild .config
+.PHONY: all clean install prebuild .config

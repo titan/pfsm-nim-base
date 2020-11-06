@@ -195,14 +195,14 @@ toNimTestExpression caller (CompareExpression op e1 e2)    = (toNimExpression ca
 
 export
 toNimFromJson : String -> Tipe -> String
-toNimFromJson s (TPrimType PTBool)                                     = s ++ "getBool"
+toNimFromJson s (TPrimType PTBool)                                     = s ++ ".getBool"
 toNimFromJson s (TPrimType PTByte)                                     = "cast[uint8](" ++ s ++ ".getInt)"
 toNimFromJson s (TPrimType PTShort)                                    = "cast[int16](" ++ s ++ ".getInt)"
 toNimFromJson s (TPrimType PTUShort)                                   = "cast[uint16](" ++ s ++ ".getInt)"
 toNimFromJson s (TPrimType PTInt)                                      = s ++ ".getInt"
 toNimFromJson s (TPrimType PTUInt)                                     = "cast[uint](" ++ s ++ ".getInt)"
-toNimFromJson s (TPrimType PTLong)                                     = s ++ ".getBiggestInt"
-toNimFromJson s (TPrimType PTULong)                                    = "cast[uint64](" ++ s ++ ".getBiggestInt)"
+toNimFromJson s (TPrimType PTLong)                                     = s ++ ".getStr(\"0\").parseBiggestInt"
+toNimFromJson s (TPrimType PTULong)                                    = s ++ ".getStr(\"0\").parseBiggestUInt"
 toNimFromJson s (TPrimType PTReal)                                     = s ++ ".getFloat"
 toNimFromJson s (TPrimType PTChar)                                     = "if len(" ++ s ++ ".getStr) > 0: " ++ s ++ ".getStr()[0] else: '\\0'"
 toNimFromJson s (TPrimType PTString)                                   = s ++ ".getStr"
@@ -214,6 +214,13 @@ toNimFromJson s (TDict PTString (TDict PTString (TPrimType PTString))) = s ++ ".
 toNimFromJson s (TDict PTString (TDict PTString t@(TPrimType _)))      = s ++ ".jsonToDictTable[" ++ (toNimType t) ++ "]()"
 toNimFromJson s (TRecord n _)                                          = s ++ ".jsonTo" ++ (camelize n)
 toNimFromJson s _                                                      = s
+
+export
+toNimToJson : String -> Tipe -> String
+toNimToJson s (TPrimType PTLong)  = "% (\"$1\" % " ++ s ++ ")"
+toNimToJson s (TPrimType PTULong) = "% (\"$1\" % " ++ s ++ ")"
+toNimToJson s _                   = "% " ++ s
+
 
 export
 toNimFromString : String -> Tipe -> String
@@ -235,9 +242,9 @@ toNimFromString s _                    = s
 
 export
 toNimString : Name -> Tipe -> String
-toNimString n (TPrimType PTString) = toNimName n
-toNimString n (TPrimType _)        = "$ " ++ (toNimName n)
-toNimString n (TList _)            = "$ % " ++ (toNimName n)
-toNimString n (TDict _ _)          = "$ % " ++ (toNimName n)
-toNimString n (TRecord _ _)        = "$ % " ++ (toNimName n)
-toNimString n _                    = toNimName n
+toNimString n (TPrimType PTString) = n
+toNimString n (TPrimType _)        = "$ " ++ n
+toNimString n t@(TList _)          = "$ " ++ (toNimToJson n t)
+toNimString n t@(TDict _ _)        = "$ " ++ (toNimToJson n t)
+toNimString n t@(TRecord _ _)      = "$ " ++ (toNimToJson n t)
+toNimString n _                    = n
