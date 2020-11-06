@@ -1,28 +1,23 @@
 include .config
 NAME-LINK=$(subst _,-,$(NAME))
 
-PKGPREFIX=Pfsm
-TARGET=$(BUILDDIR)/build/ttc/$(PKGPREFIX)/Nim.ttc
-SRCS=$(wildcard $(PKGPREFIX)/*.idr)
-DSTSRCS=$(addprefix $(BUILDDIR)/$(PKGPREFIX)/, $(notdir $(SRCS)))
-DSTSRCS+=$(BUILDDIR)/$(PKGPREFIX)/Nim.idr
+SRCS=$(wildcard $(PKGPREFIX)/*.idr) $(wildcard *.idr)
+DSTSRCS=$(SRCS:%=$(BUILDDIR)/%)
 PRJCONF=$(NAME-LINK).ipkg
+DSTCONF=$(BUILDDIR)/$(PRJCONF)
 
 all: $(TARGET)
 
 install: $(TARGET)
 	cd $(BUILDDIR); idris2 --install $(PRJCONF); cd -
 
-$(TARGET): $(SRCS:%=$(BUILDDIR)/%) $(BUILDDIR)/$(PRJCONF) | prebuild
+$(TARGET): $(DSTSRCS) $(DSTCONF) | prebuild
 	cd $(BUILDDIR); idris2 --build $(PRJCONF); cd -
 
-$(SRCS): %: $(BUILDDIR)/% | prebuild
+$(DSTSRCS): $(BUILDDIR)/%: % | prebuild
 	cp $< $@
 
-$(BUILDDIR)/%.idr: %.idr | prebuild
-	cp $< $@
-
-$(BUILDDIR)/$(PRJCONF): $(PRJCONF) | prebuild
+$(DSTCONF): $(PRJCONF) | prebuild
 	cp $< $@
 
 prebuild:
