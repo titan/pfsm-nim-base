@@ -217,9 +217,13 @@ toNimFromJson s _                                                      = s
 
 export
 toNimToJson : String -> Tipe -> String
-toNimToJson s (TPrimType PTLong)  = "% (\"$1\" % " ++ s ++ ")"
-toNimToJson s (TPrimType PTULong) = "% (\"$1\" % " ++ s ++ ")"
-toNimToJson s _                   = "% " ++ s
+toNimToJson s (TPrimType PTLong)          = "% ($" ++ s ++ ")"
+toNimToJson s (TPrimType PTULong)         = "% ($" ++ s ++ ")"
+toNimToJson s (TList (TPrimType PTLong))  = "% (" ++ s ++ ".mapIt($it))"
+toNimToJson s (TList (TPrimType PTULong)) = "% (" ++ s ++ ".mapIt($it))"
+toNimToJson s (TList (TRecord n ps))      = "% (" ++ s ++ ".mapIt(" ++ (camelize n) ++ "ToJson(it)" ++ "))"
+toNimToJson s (TRecord n ps)              = (camelize n) ++ "ToJson(" ++ s ++ ")"
+toNimToJson s _                           = "% " ++ s
 
 
 export
