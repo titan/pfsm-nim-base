@@ -175,6 +175,7 @@ toNimExpression _                    (BooleanExpression False)    = "false"
 toNimExpression _                    (IdentifyExpression i)       = toNimModelAttribute i
 toNimExpression _                    (IntegerLiteralExpression i) = show i
 toNimExpression _                    (RealLiteralExpression r)    = show r
+toNimExpression _                    (CharLiteralExpression c)    = show c
 toNimExpression _                    (StringLiteralExpression s)  = "\"" ++ s ++ "\""
 
 export
