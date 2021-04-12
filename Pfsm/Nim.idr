@@ -144,6 +144,7 @@ toNimType (TList t)                             = "seq[" ++ (toNimType t) ++ "]"
 toNimType (TDict PTString (TPrimType PTString)) = "StringTableRef"
 toNimType (TDict k v)                           = "TableRef[" ++ (primToNimType k) ++ ", " ++ (toNimType v) ++ "]"
 toNimType (TRecord n _)                         = camelize n
+toNimType (TRecordRef n)                        = camelize n
 toNimType t@(TArrow a b)                        = case liftArrowParams t [] of
                                                        []      => toNimFuncType []           TUnit
                                                        x :: xs => toNimFuncType (reverse xs) x

@@ -9,7 +9,8 @@ DSTCONF=$(BUILDDIR)/$(PRJCONF)
 all: $(TARGET)
 
 install: $(TARGET)
-	cd $(BUILDDIR); idris2 --install $(PRJCONF); cd -
+	cd $(BUILDDIR); sudo idris2 --install $(PRJCONF); cd -
+	sudo chmod -R 755 `idris2 --libdir`/$(LIBPREFIX)
 
 $(TARGET): $(DSTSRCS) $(DSTCONF) | prebuild
 	cd $(BUILDDIR); idris2 --build $(PRJCONF); cd -

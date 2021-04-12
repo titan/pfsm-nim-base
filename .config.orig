@@ -2,3 +2,4 @@ NAME=pfsm-nim-base
 PKGPREFIX=Pfsm
 TARGET=$(BUILDDIR)/build/ttc/$(PKGPREFIX)/Nim.ttc
 BUILDDIR=/dev/shm/$(NAME-LINK)
+LIBPREFIX=pfsm
