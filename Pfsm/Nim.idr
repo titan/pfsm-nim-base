@@ -77,6 +77,7 @@ nimKeywords = [ "addr"
               , "of"
               , "off"
               , "or"
+              , "on"
               , "out"
               , "proc"
               , "ptr"
@@ -214,7 +215,7 @@ toNimFromJson s (TDict PTString t@(TPrimType _))                       = s ++ ".
 toNimFromJson s (TDict PTString (TList t))                             = s ++ ".jsonToSeqTable[" ++ (toNimType t) ++ "]()"
 toNimFromJson s (TDict PTString (TDict PTString (TPrimType PTString))) = s ++ ".jsonToDictStringTable()"
 toNimFromJson s (TDict PTString (TDict PTString t@(TPrimType _)))      = s ++ ".jsonToDictTable[" ++ (toNimType t) ++ "]()"
-toNimFromJson s (TRecord n _)                                          = s ++ ".jsonTo" ++ (camelize n)
+toNimFromJson s (TRecord n _)                                          = s ++ ".json_to_" ++ (toNimName n)
 toNimFromJson s _                                                      = s
 
 export
